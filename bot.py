@@ -109,7 +109,6 @@ async def analisa(ctx, kode: str):
             sinyal = "🟡 Netral"
 
         await ctx.send(
-        await ctx.send(
              f"📊 ANALISA {kode.upper()}\n"
              f"Harga : {harga}\n"
              f"MA20   : {int(ma20)}\n"
