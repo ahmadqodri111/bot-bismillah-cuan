@@ -50,6 +50,17 @@ async def analisa(ctx, kode: str):
         rsi_val = rsi.iloc[-1]
 
         harga = int(close.iloc[-1])
+	# Support level
+	support1 = int(data["Low"].tail(20).min())
+	support2 = int(data["Low"].tail(50).min())
+
+	# Deteksi breakdown
+	if harga < support2:
+	    breakdown = "🔴 Support 2 jebol → Potensi Downtrend"
+	elif harga < support1:
+	    breakdown = "🟡 Waspada (di bawah support kuat)"
+	else:
+	    breakdown = "🟢 Aman di atas support"
 
         # Analisa trend
         if ma20 > ma50:
@@ -72,17 +83,22 @@ async def analisa(ctx, kode: str):
             sinyal = "🔴 Waspada (overbought)"
         else:
             sinyal = "🟡 Netral"
-
-        await ctx.send(
-            f"📊 ANALISA {kode.upper()}\n"
-            f"Harga : {harga}\n"
-            f"MA20   : {int(ma20)}\n"
-            f"MA50   : {int(ma50)}\n"
-            f"RSI    : {rsi_val:.2f}\n"
-            f"Trend  : {trend}\n"
-            f"Gaya   : {gaya}\n"
-            f"Sinyal : {sinyal}"
-        )
+	await ctx.send(
+	    f"📊 ANALISA {kode.upper()}\n"
+    	    f"Harga : {harga}\n"
+    	    f"MA20   : {int(ma20)}\n"
+    	    f"MA50   : {int(ma50)}\n"
+    	    f"RSI    : {rsi_val:.2f}\n"
+    	    f"Trend  : {trend}\n"
+    	    f"Gaya   : {gaya}\n"
+    	    f"Entry  : {entry}\n"
+    	    f"TP     : {tp}\n"
+    	    f"SL     : {sl}\n"
+    	    f"Support 1 : {support1}\n"
+    	    f"Support 2 : {support2}\n"
+    	    f"Status S  : {breakdown}\n"
+    	    f"Sinyal : {sinyal}"
+	)
 
     except Exception:
         await ctx.send("⚠️ Terjadi error saat analisa")
