@@ -54,7 +54,14 @@ async def analisa(ctx, kode: str):
         if ma20 > ma50:
             trend = "📈 Bullish"
         else:
-            trend = "📉 Bearish"
+            trend = "📉 Bearish" 
+	# Tentukan gaya trading
+	selisih_ma = abs(ma20 - ma50) / ma50 * 100
+
+if selisih_ma < 1 and 40 <= rsi_val <= 60:
+	    gaya = "⚡ Scalping"
+	else:
+	    gaya = "⏳ Swing"
 
         # Sinyal sederhana
         if rsi_val < 30 and ma20 > ma50:
@@ -71,6 +78,7 @@ async def analisa(ctx, kode: str):
             f"MA50   : {int(ma50)}\n"
             f"RSI    : {rsi_val:.2f}\n"
             f"Trend  : {trend}\n"
+	    f"Gaya   : {gaya}\n"
             f"Sinyal : {sinyal}"
         )
 
