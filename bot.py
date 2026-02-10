@@ -109,24 +109,25 @@ async def analisa(ctx, kode: str):
             sinyal = "🟡 Netral"
 
         await ctx.send(
-            f"📊 ANALISA {kode.upper()}\n"
-            f"Harga : {harga}\n"
-            f"MA20   : {int(ma20)}\n"
-            f"MA50   : {int(ma50)}\n"
-            f"RSI    : {rsi_val:.2f}\n"
-            f"Trend  : {trend}\n"
-            f"Gaya   : {gaya}\n"
-            f"Entry  : {entry}\n"
-            f"TP     : {tp}\n"
-            f"SL     : {sl}\n"
-            f"Support 1 : {support1}\n"
-            f"Support 2 : {support2}\n"
-            f"Status S  : {breakdown}\n"
-            f"Sinyal : {sinyal}"\n"
-            f"Entry Valid : {entry_valid}\n"
-            f"Alasan      : {alasan_entry}\n"
-        )
-
+        await ctx.send(
+             f"📊 ANALISA {kode.upper()}\n"
+             f"Harga : {harga}\n"
+             f"MA20   : {int(ma20)}\n"
+             f"MA50   : {int(ma50)}\n"
+             f"RSI    : {rsi_val:.2f}\n"
+             f"Trend  : {trend}\n"
+             f"Gaya   : {gaya}\n"
+             f"Entry  : {entry}\n"
+             f"TP     : {tp}\n"
+             f"SL     : {sl}\n"
+             f"Support 1 : {support1}\n"
+             f"Support 2 : {support2}\n"
+             f"Status S  : {breakdown}\n"
+             f"Sinyal : {sinyal}\n"
+             f"Entry Valid : {entry_valid}\n"
+             f"Alasan      : {alasan_entry}\n"
+       )
+      
     except Exception as e:
         await ctx.send("⚠️ Terjadi error saat analisa")
 
