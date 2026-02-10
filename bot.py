@@ -18,5 +18,8 @@ async def on_ready():
 @bot.command()
 async def ping(ctx):
     await ctx.send("🏓 Pong! Bot hidup 24 jam")
+@bot.command()
+async def analisa(ctx):
+    await ctx.send("📊 Analisa saham: fitur sedang disiapkan")
 
 bot.run(TOKEN)
