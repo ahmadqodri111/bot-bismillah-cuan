@@ -85,21 +85,22 @@ async def analisa(ctx, kode: str):
             breakdown = "🟡 Waspada (di bawah support kuat)"
         else:
             breakdown = "🟢 Aman di atas support"
-        # Validasi entry di support
+        # Zona entry berbasis support
         jarak_support = abs(harga - support1) / support1 * 100
 
-        if (
-            jarak_support <= 1 and
-            harga >= support2 and
-            trend != "📉 Bearish" and
-            rsi_val <= 65
-        ):
-            entry_valid = "✅ Ya"
-            alasan_entry = "Harga dekat support kuat + trend mendukung"
+        if harga < support2:
+            zona_entry = "🔴 HINDARI"
+            alasan_zona = "Support 2 jebol, risiko downtrend"
+        elif jarak_support <= 2:
+            zona_entry = "🟢 IDEAL (EKSEKUSI)"
+            alasan_zona = "Harga sangat dekat support kuat"
+        elif jarak_support <= 5:
+            zona_entry = "🟡 BOLEH (AGRESIF)"
+            alasan_zona = "Harga masih wajar di atas support"
         else:
-            entry_valid = "❌ Tidak"
-            alasan_entry = "Belum ada konfirmasi support"
-
+            zona_entry = "🔴 HINDARI"
+            alasan_zona = "Harga terlalu jauh dari support"
+        
         # Sinyal
         if rsi_val < 30 and ma20 > ma50:
             sinyal = "🟢 Layak dipantau"
@@ -123,8 +124,8 @@ async def analisa(ctx, kode: str):
              f"Support 2 : {support2}\n"
              f"Status S  : {breakdown}\n"
              f"Sinyal : {sinyal}\n"
-             f"Entry Valid : {entry_valid}\n"
-             f"Alasan      : {alasan_entry}\n"
+             f"Zona Entry : {zona_entry}\n"
+             f"Catatan      : {alasan_zona}\n"
        )
       
     except Exception as e:
