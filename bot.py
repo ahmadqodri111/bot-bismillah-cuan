@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 import yfinance as yf
 import pandas as pd
 
+from saham_list import SAHAM_ALL
+
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 
