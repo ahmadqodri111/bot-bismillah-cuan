@@ -131,4 +131,88 @@ async def analisa(ctx, kode: str):
     except Exception as e:
         await ctx.send("⚠️ Terjadi error saat analisa")
 
+@bot.command()
+async def scalping(ctx, min_harga: int = 0, max_harga: int = 10_000_000):
+    rekom = []
+
+    await ctx.send("🔍 Mencari peluang scalping (target minimal +3%)...")
+
+    for kode in SAHAM_ALL:
+        saham = yf.Ticker(kode + ".JK")
+        data = saham.history(period="3mo")
+
+        if data.empty or len(data) < 50:
+            continue
+
+        close = data["Close"]
+        high = data["High"]
+        low = data["Low"]
+
+        harga = int(close.iloc[-1])
+
+        # filter harga (opsional)
+        if harga < min_harga or harga > max_harga:
+            continue
+
+        # MA
+        ma20 = close.rolling(20).mean().iloc[-1]
+        ma50 = close.rolling(50).mean().iloc[-1]
+
+        # RSI
+        delta = close.diff()
+        gain = delta.clip(lower=0)
+        loss = -delta.clip(upper=0)
+        rs = gain.rolling(14).mean() / loss.rolling(14).mean()
+        rsi = 100 - (100 / (1 + rs))
+        rsi_val = rsi.iloc[-1]
+
+        # target realistis (lihat high 20 hari)
+        target_wajar = high.tail(20).max()
+        potensi_naik = (target_wajar - harga) / harga * 100
+
+        # ===== FILTER KERAS =====
+        if (
+            potensi_naik >= 3 and          # peluang minimal 3%
+            ma20 >= ma50 and               # arah tidak melawan
+            rsi_val <= 65                  # belum kemahalan
+        ):
+            entry_bawah = int(harga * 0.98)
+            entry_atas = harga
+            target = int(harga * 1.03)
+            sl = int(harga * 0.99)
+
+            rekom.append({
+                "kode": kode,
+                "harga": harga,
+                "entry": f"{entry_bawah} – {entry_atas}",
+                "target": target,
+                "sl": sl,
+                "alasan": "harga masih punya ruang naik, risiko masih masuk akal"
+            })
+
+    # ===== HASIL =====
+    if not rekom:
+        await ctx.send(
+            "⚡ REKOMENDASI SCALPING\n\n"
+            "❌ Tidak ada saham dengan peluang naik ≥3% saat ini.\n"
+            "Catatan: kondisi pasar kurang ideal, lebih baik menunggu."
+        )
+        return
+
+    pesan = "⚡ REKOMENDASI SCALPING (POTENSI ≥3%)\n\n"
+
+    for i, r in enumerate(rekom[:5], start=1):
+        pesan += (
+            f"{i}️⃣ {r['kode']}\n"
+            f"Harga sekarang : {r['harga']}\n"
+            f"Masuk ideal    : {r['entry']} (tunggu turun dikit, jangan kejar)\n"
+            f"Target         : {r['target']} (+3%)\n"
+            f"Batas rugi     : {r['sl']} (-1%)\n"
+            f"Alasan         : {r['alasan']}\n\n"
+        )
+
+    pesan += "Catatan: kalau harga sudah di atas area masuk, lebih baik tunggu."
+
+    await ctx.send(pesan)
+
 bot.run(TOKEN)
