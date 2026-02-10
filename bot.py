@@ -20,6 +20,7 @@ async def on_ready():
 @bot.command()
 async def ping(ctx):
     await ctx.send("🏓 Pong! Bot hidup 24 jam")
+
 @bot.command()
 async def analisa(ctx, kode: str):
     try:
@@ -54,14 +55,15 @@ async def analisa(ctx, kode: str):
         if ma20 > ma50:
             trend = "📈 Bullish"
         else:
-            trend = "📉 Bearish" 
-	# Tentukan gaya trading
-	selisih_ma = abs(ma20 - ma50) / ma50 * 100
+            trend = "📉 Bearish"
 
-if selisih_ma < 1 and 40 <= rsi_val <= 60:
-	    gaya = "⚡ Scalping"
-	else:
-	    gaya = "⏳ Swing"
+        # Tentukan gaya trading
+        selisih_ma = abs(ma20 - ma50) / ma50 * 100
+
+        if selisih_ma < 1 and 40 <= rsi_val <= 60:
+            gaya = "⚡ Scalping"
+        else:
+            gaya = "⏳ Swing"
 
         # Sinyal sederhana
         if rsi_val < 30 and ma20 > ma50:
@@ -78,7 +80,7 @@ if selisih_ma < 1 and 40 <= rsi_val <= 60:
             f"MA50   : {int(ma50)}\n"
             f"RSI    : {rsi_val:.2f}\n"
             f"Trend  : {trend}\n"
-	    f"Gaya   : {gaya}\n"
+            f"Gaya   : {gaya}\n"
             f"Sinyal : {sinyal}"
         )
 
