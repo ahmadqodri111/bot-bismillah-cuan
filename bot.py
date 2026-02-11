@@ -12,11 +12,10 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 
 intents = discord.Intents.default()
 intents.message_content = True
-
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ==============================
-# ENGINE ANALISA INTI
+# UTIL FUNCTION
 # ==============================
 
 def hitung_indikator(data):
@@ -27,7 +26,6 @@ def hitung_indikator(data):
 
     harga = close.iloc[-1]
 
-    ma5 = close.rolling(5).mean().iloc[-1]
     ma20 = close.rolling(20).mean().iloc[-1]
     ma50 = close.rolling(50).mean().iloc[-1]
 
@@ -41,21 +39,16 @@ def hitung_indikator(data):
     avg_vol = volume.tail(20).mean()
     vol_now = volume.iloc[-1]
 
-    support20 = low.tail(20).min()
-    resistance20 = high.tail(20).max()
-    resistance50 = high.tail(50).max()
-
     return {
         "harga": harga,
-        "ma5": ma5,
         "ma20": ma20,
         "ma50": ma50,
         "rsi": rsi_val,
         "avg_vol": avg_vol,
         "vol_now": vol_now,
-        "support20": support20,
-        "res20": resistance20,
-        "res50": resistance50
+        "high20": high.tail(20).max(),
+        "low10": low.tail(10).min(),
+        "high50": high.tail(50).max()
     }
 
 # ==============================
@@ -65,10 +58,30 @@ def hitung_indikator(data):
 @bot.event
 async def on_ready():
     print("Bot sudah online")
-    print("Command:", [c.name for c in bot.commands])
+    print("Command terdaftar:", [c.name for c in bot.commands])
 
 # ==============================
-# MODE ANALISA (KONSERVATIF)
+# HELP
+# ==============================
+
+@bot.command()
+async def help(ctx):
+    await ctx.send(
+        "📘 DAFTAR COMMAND BOT\n\n"
+        "!analisa KODE → Detail 1 saham\n"
+        "Waktu: 15.30–18.00 atau malam hari\n\n"
+        "!cepat → Day trade (1 hari)\n"
+        "Waktu: 08.30–10.30\n\n"
+        "!bsjp → Beli sore jual pagi\n"
+        "Waktu: 14.30–15.00\n\n"
+        "!swing → 2–4 minggu\n"
+        "Waktu: Weekend / setelah market tutup\n\n"
+        "!rekom → 1 terbaik hari ini\n\n"
+        "Jika kosong → market tidak ideal."
+    )
+
+# ==============================
+# ANALISA DETAIL
 # ==============================
 
 @bot.command()
@@ -77,190 +90,189 @@ async def analisa(ctx, kode: str):
         saham = yf.Ticker(kode + ".JK")
         data = saham.history(period="6mo")
 
-        if data.empty or len(data) < 60:
-            await ctx.send("Data tidak cukup.")
+        if data.empty:
+            await ctx.send("❌ Data tidak ditemukan")
             return
 
         ind = hitung_indikator(data)
 
-        harga = int(ind["harga"])
-        support = int(ind["support20"])
-        resistance = int(ind["res20"])
+        trend = "📈 Bullish" if ind["ma20"] > ind["ma50"] else "📉 Bearish"
 
-        rr_target = resistance - harga
-        rr_risk = harga - support
+        support = int(data["Low"].tail(20).min())
+        resistance = int(data["High"].tail(20).max())
 
-        if rr_risk <= 0:
-            rr_ratio = 0
-        else:
-            rr_ratio = round(rr_target / rr_risk, 2)
+        target = int(ind["harga"] * 1.05)
+        sl = int(ind["harga"] * 0.97)
+        rr = round((target - ind["harga"]) / (ind["harga"] - sl), 2)
 
-        trend = "Bullish" if ind["ma20"] > ind["ma50"] else "Bearish"
+        status = "🟢 Layak Entry" if rr >= 1.5 and trend == "📈 Bullish" else "🔴 Tunggu"
 
         await ctx.send(
             f"📊 ANALISA {kode.upper()}\n\n"
-            f"Harga        : {harga}\n"
-            f"Trend        : {trend}\n"
-            f"Support      : {support}\n"
-            f"Resistance   : {resistance}\n"
-            f"Risk/Reward  : {rr_ratio}\n"
+            f"Harga      : {int(ind['harga'])}\n"
+            f"Trend      : {trend}\n"
+            f"RSI        : {ind['rsi']:.2f}\n"
+            f"Support    : {support}\n"
+            f"Resistance : {resistance}\n\n"
+            f"Target     : {target}\n"
+            f"Stoploss   : {sl}\n"
+            f"RR         : {rr}\n\n"
+            f"Status     : {status}"
         )
 
     except:
-        await ctx.send("Terjadi error.")
+        await ctx.send("⚠️ Error analisa")
 
 # ==============================
-# MODE CEPAT (MOMENTUM 5-8%)
+# MODE CEPAT (DAY TRADE)
 # ==============================
 
 @bot.command()
 async def cepat(ctx):
     rekom = []
 
-    await ctx.send("🚀 Scan momentum cepat...")
-
     for kode in SAHAM_ALL:
         try:
             saham = yf.Ticker(kode + ".JK")
             data = saham.history(period="3mo")
-
-            if data.empty or len(data) < 40:
+            if data.empty or len(data) < 50:
                 continue
 
             ind = hitung_indikator(data)
 
+            potensi = (ind["high20"] - ind["harga"]) / ind["harga"] * 100
+
             if (
-                ind["harga"] >= ind["res20"] * 0.99 and
-                ind["vol_now"] > ind["avg_vol"] * 1.2 and
-                50 <= ind["rsi"] <= 75 and
-                ind["ma5"] > ind["ma20"]
+                potensi >= 3 and
+                ind["ma20"] > ind["ma50"] and
+                ind["rsi"] >= 55 and ind["rsi"] <= 70 and
+                ind["vol_now"] > 1.5 * ind["avg_vol"]
             ):
-                rekom.append((kode, ind["harga"]))
+                target = int(ind["harga"] * 1.04)
+                sl = int(ind["harga"] * 0.97)
+                rr = round((target - ind["harga"]) / (ind["harga"] - sl), 2)
+
+                rekom.append((kode, ind["harga"], target, sl, rr))
 
         except:
             continue
 
     if not rekom:
-        await ctx.send("Tidak ada momentum kuat hari ini.")
+        await ctx.send("⚡ MODE CEPAT\n\n❌ Tidak ada momentum sehat.\nStatus: 🔴 Tunggu")
         return
 
-    pesan = "🚀 MOMENTUM CEPAT\n\n"
+    rekom = sorted(rekom, key=lambda x: x[4], reverse=True)[:3]
 
-    for i, r in enumerate(rekom[:3], start=1):
-        target = int(r[1] * 1.07)
-        sl = int(r[1] * 0.97)
-
+    pesan = "⚡ MODE CEPAT (DAY TRADE)\n\n"
+    for r in rekom:
+        status = "🟢 Layak Entry" if r[4] >= 1.5 else "🔴 Tunggu"
         pesan += (
-            f"{i}. {r[0]}\n"
+            f"{r[0]}\n"
             f"Harga : {int(r[1])}\n"
-            f"Target: {target}\n"
-            f"SL    : {sl}\n\n"
+            f"Target: {r[2]}\n"
+            f"SL    : {r[3]}\n"
+            f"RR    : {r[4]}\n"
+            f"Status: {status}\n\n"
         )
 
     await ctx.send(pesan)
 
 # ==============================
-# MODE SWING
+# BSJP
+# ==============================
+
+@bot.command()
+async def bsjp(ctx):
+    rekom = []
+
+    for kode in SAHAM_ALL:
+        try:
+            saham = yf.Ticker(kode + ".JK")
+            data = saham.history(period="3mo")
+            if data.empty:
+                continue
+
+            ind = hitung_indikator(data)
+
+            jarak = (ind["harga"] - ind["low10"]) / ind["low10"] * 100
+
+            if jarak <= 3 and ind["rsi"] <= 50:
+                target = int(ind["harga"] * 1.03)
+                sl = int(ind["harga"] * 0.98)
+                rr = round((target - ind["harga"]) / (ind["harga"] - sl), 2)
+                rekom.append((kode, ind["harga"], target, sl, rr))
+
+        except:
+            continue
+
+    if not rekom:
+        await ctx.send("🌙 MODE BSJP\n\n❌ Tidak ada pantulan sehat.\nStatus: 🔴 Tunggu")
+        return
+
+    rekom = rekom[:2]
+
+    pesan = "🌙 MODE BSJP\n\n"
+    for r in rekom:
+        pesan += (
+            f"{r[0]}\n"
+            f"Harga : {int(r[1])}\n"
+            f"Target: {r[2]}\n"
+            f"SL    : {r[3]}\n\n"
+        )
+
+    await ctx.send(pesan)
+
+# ==============================
+# SWING
 # ==============================
 
 @bot.command()
 async def swing(ctx):
     rekom = []
 
-    await ctx.send("📈 Scan swing...")
-
     for kode in SAHAM_ALL:
         try:
             saham = yf.Ticker(kode + ".JK")
             data = saham.history(period="6mo")
-
-            if data.empty or len(data) < 60:
+            if data.empty:
                 continue
 
             ind = hitung_indikator(data)
 
-            if (
-                ind["ma20"] > ind["ma50"] and
-                ind["harga"] >= ind["res50"] * 0.99 and
-                ind["vol_now"] > ind["avg_vol"]
-            ):
-                rekom.append((kode, ind["harga"]))
+            potensi = (ind["high50"] - ind["harga"]) / ind["harga"] * 100
+
+            if potensi >= 8 and ind["ma20"] > ind["ma50"]:
+                target = int(ind["harga"] * 1.1)
+                sl = int(ind["harga"] * 0.94)
+                rr = round((target - ind["harga"]) / (ind["harga"] - sl), 2)
+                rekom.append((kode, ind["harga"], target, sl, rr))
 
         except:
             continue
 
     if not rekom:
-        await ctx.send("Tidak ada swing valid.")
+        await ctx.send("⏳ MODE SWING\n\n❌ Tidak ada trend kuat.\nStatus: 🔴 Tunggu")
         return
 
-    pesan = "📈 SWING SETUP\n\n"
+    rekom = rekom[:2]
 
-    for i, r in enumerate(rekom[:3], start=1):
-        target = int(r[1] * 1.12)
-        sl = int(r[1] * 0.95)
-
+    pesan = "⏳ MODE SWING\n\n"
+    for r in rekom:
         pesan += (
-            f"{i}. {r[0]}\n"
+            f"{r[0]}\n"
             f"Harga : {int(r[1])}\n"
-            f"Target: {target}\n"
-            f"SL    : {sl}\n\n"
+            f"Target: {r[2]}\n"
+            f"SL    : {r[3]}\n\n"
         )
 
     await ctx.send(pesan)
 
 # ==============================
-# MODE REKOM (SCORING SYSTEM)
+# REKOM (1 TERBAIK)
 # ==============================
 
 @bot.command()
 async def rekom(ctx):
-    hasil = []
-
-    await ctx.send("🔎 Scan rekom hari ini...")
-
-    for kode in SAHAM_ALL:
-        try:
-            saham = yf.Ticker(kode + ".JK")
-            data = saham.history(period="3mo")
-
-            if data.empty or len(data) < 40:
-                continue
-
-            ind = hitung_indikator(data)
-
-            skor = 0
-
-            if ind["ma20"] > ind["ma50"]:
-                skor += 1
-            if ind["vol_now"] > ind["avg_vol"]:
-                skor += 1
-            if 50 <= ind["rsi"] <= 70:
-                skor += 1
-            if ind["harga"] >= ind["res20"] * 0.98:
-                skor += 1
-            if ind["harga"] <= ind["support20"] * 1.03:
-                skor += 1
-
-            if skor >= 3:
-                hasil.append((kode, skor, ind["harga"]))
-
-        except:
-            continue
-
-    if not hasil:
-        await ctx.send("Tidak ada peluang menarik hari ini.")
-        return
-
-    hasil.sort(key=lambda x: x[1], reverse=True)
-
-    pesan = "🔥 REKOM HARI INI\n\n"
-
-    for i, r in enumerate(hasil[:3], start=1):
-        pesan += (
-            f"{i}. {r[0]} | Skor: {r[1]}\n"
-            f"Harga: {int(r[2])}\n\n"
-        )
-
-    await ctx.send(pesan)
+    await ctx.send("🔥 REKOMENDASI HARI INI\nGunakan !cepat untuk peluang utama.")
 
 bot.run(TOKEN)
