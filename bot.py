@@ -145,92 +145,85 @@ async def scalping(ctx, mode: str = "aman", min_harga: int = 0, max_harga: int =
     await ctx.send(f"🔍 Mencari peluang scalping mode: {mode.upper()} (target ≥3%)...")
 
     for kode in SAHAM_ALL:
-        saham = yf.Ticker(kode + ".JK")
-        data = saham.history(period="3mo")
+        try:
+            saham = yf.Ticker(kode + ".JK")
+            data = saham.history(period="3mo")
 
-        if data.empty or len(data) < 50:
+            if data.empty or len(data) < 50:
+                continue
+
+            close = data["Close"]
+            high = data["High"]
+            low = data["Low"]
+            volume = data["Volume"]
+
+            harga = int(close.iloc[-1])
+
+            if harga < min_harga or harga > max_harga:
+                continue
+
+            # MA
+            ma5 = close.rolling(5).mean().iloc[-1]
+            ma20 = close.rolling(20).mean().iloc[-1]
+            ma50 = close.rolling(50).mean().iloc[-1]
+
+            # RSI
+            delta = close.diff()
+            gain = delta.clip(lower=0)
+            loss = -delta.clip(upper=0)
+            rs = gain.rolling(14).mean() / loss.rolling(14).mean()
+            rsi = 100 - (100 / (1 + rs))
+            rsi_val = rsi.iloc[-1]
+
+            # Potensi naik
+            target_wajar = high.tail(20).max()
+            potensi_naik = (target_wajar - harga) / harga * 100
+
+            # =========================
+            # MODE AMAN
+            # =========================
+            if mode == "aman":
+                if (
+                    potensi_naik >= 3 and
+                    ma20 >= ma50 and
+                    rsi_val <= 65
+                ):
+                    rekom.append({
+                        "kode": kode,
+                        "harga": harga,
+                        "entry": f"{int(harga*0.98)} – {harga}",
+                        "target": int(harga*1.03),
+                        "sl": int(harga*0.99),
+                        "alasan": "arah stabil dan risiko relatif kecil"
+                    })
+
+            # =========================
+            # MODE AGRESIF
+            # =========================
+            elif mode == "agresif":
+                high_20 = high.tail(20).max()
+                avg_vol = volume.tail(20).mean()
+                vol_now = volume.iloc[-1]
+                jarak_ma = (harga - ma20) / ma20 * 100
+
+                if (
+                    harga >= high_20 * 0.99 and
+                    vol_now > avg_vol and
+                    jarak_ma <= 5 and
+                    rsi_val <= 75 and
+                    potensi_naik >= 3
+                ):
+                    rekom.append({
+                        "kode": kode,
+                        "harga": harga,
+                        "entry": f"{int(harga*0.99)} – {harga}",
+                        "target": int(harga*1.04),
+                        "sl": int(harga*0.98),
+                        "alasan": "momentum kuat + volume naik"
+                    })
+
+        except Exception:
             continue
-
-        close = data["Close"]
-        high = data["High"]
-        low = data["Low"]
-        volume = data["Volume"]
-
-        harga = int(close.iloc[-1])
-
-        if harga < min_harga or harga > max_harga:
-            continue
-
-        # MA
-        ma5 = close.rolling(5).mean().iloc[-1]
-        ma20 = close.rolling(20).mean().iloc[-1]
-        ma50 = close.rolling(50).mean().iloc[-1]
-
-        # RSI
-        delta = close.diff()
-        gain = delta.clip(lower=0)
-        loss = -delta.clip(upper=0)
-        rs = gain.rolling(14).mean() / loss.rolling(14).mean()
-        rsi = 100 - (100 / (1 + rs))
-        rsi_val = rsi.iloc[-1]
-
-        # Potensi naik
-        target_wajar = high.tail(20).max()
-        potensi_naik = (target_wajar - harga) / harga * 100
-
-        # =========================
-        # MODE AMAN
-        # =========================
-        if mode == "aman":
-            if (
-                potensi_naik >= 3 and
-                ma20 >= ma50 and
-                rsi_val <= 65
-            ):
-                entry_bawah = int(harga * 0.98)
-                entry_atas = harga
-                target = int(harga * 1.03)
-                sl = int(harga * 0.99)
-
-                rekom.append({
-                    "kode": kode,
-                    "harga": harga,
-                    "entry": f"{entry_bawah} – {entry_atas}",
-                    "target": target,
-                    "sl": sl,
-                    "alasan": "arah stabil dan risiko relatif kecil"
-                })
-
-        # =========================
-        # MODE AGRESIF (BREAKOUT + VOLUME)
-        # =========================
-        elif mode == "agresif":
-            high_20 = high.tail(20).max()
-            avg_vol = volume.tail(20).mean()
-            vol_now = volume.iloc[-1]
-
-            jarak_ma = (harga - ma20) / ma20 * 100
-
-            if (
-                harga >= high_20 * 0.99 and      # dekat breakout
-                vol_now > avg_vol and            # volume naik
-                jarak_ma <= 5 and                # tidak terlalu jauh dari MA20
-                rsi_val <= 75 and                # belum terlalu panas
-                potensi_naik >= 3
-            ):
-                entry_bawah = int(harga * 0.99)
-                entry_atas = harga
-                target = int(harga * 1.04)
-                sl = int(harga * 0.98)
-
-                rekom.append({
-                    "kode": kode,
-                    "harga": harga,
-                    "entry": f"{entry_bawah} – {entry_atas}",
-                    "target": target,
-                    "sl": sl,
-                    "alasan": "momentum kuat + volume naik"
-                })
 
     # ===== HASIL =====
     if not rekom:
@@ -252,6 +245,96 @@ async def scalping(ctx, mode: str = "aman", min_harga: int = 0, max_harga: int =
             f"Batas rugi     : {r['sl']}\n"
             f"Alasan         : {r['alasan']}\n\n"
         )
+
+    await ctx.send(pesan)
+
+@bot.command()
+async def cepat(ctx, min_harga: int = 0, max_harga: int = 10_000_000):
+    rekom = []
+
+    await ctx.send("🚀 Mencari peluang MOMENTUM CEPAT (target 5–8%)...")
+
+    for kode in SAHAM_ALL:
+        try:
+            saham = yf.Ticker(kode + ".JK")
+            data = saham.history(period="3mo")
+
+            if data.empty or len(data) < 40:
+                continue
+
+            close = data["Close"]
+            high = data["High"]
+            volume = data["Volume"]
+
+            harga = int(close.iloc[-1])
+
+            if harga < min_harga or harga > max_harga:
+                continue
+
+            # MA20
+            ma20 = close.rolling(20).mean().iloc[-1]
+
+            # RSI
+            delta = close.diff()
+            gain = delta.clip(lower=0)
+            loss = -delta.clip(upper=0)
+            rs = gain.rolling(14).mean() / loss.rolling(14).mean()
+            rsi = 100 - (100 / (1 + rs))
+            rsi_val = rsi.iloc[-1]
+
+            # High 10 hari
+            high_10 = high.tail(10).max()
+
+            # Volume
+            avg_vol = volume.tail(20).mean()
+            vol_now = volume.iloc[-1]
+
+            # Potensi naik (lihat high 30 hari)
+            target_wajar = high.tail(30).max()
+            potensi_naik = (target_wajar - harga) / harga * 100
+
+            jarak_ma = (harga - ma20) / ma20 * 100
+
+            if (
+                harga >= high_10 * 0.99 and     # dekat breakout
+                vol_now >= avg_vol * 1.2 and    # volume meledak
+                50 <= rsi_val <= 75 and        # momentum sehat
+                potensi_naik >= 5 and          # ruang naik minimal 5%
+                jarak_ma <= 8                  # tidak terlalu jauh dari MA20
+            ):
+                rekom.append({
+                    "kode": kode,
+                    "harga": harga,
+                    "entry": f"{int(harga*0.99)} – {harga}",
+                    "target": int(harga*1.07),
+                    "sl": int(harga*0.97),
+                    "alasan": "breakout + volume kuat + momentum sehat"
+                })
+
+        except Exception:
+            continue
+
+    if not rekom:
+        await ctx.send(
+            "🚀 MODE CEPAT (5–8%)\n\n"
+            "❌ Tidak ada saham momentum kuat saat ini.\n"
+            "Catatan: jangan paksa entry kalau belum ada dorongan nyata."
+        )
+        return
+
+    pesan = "🚀 MODE CEPAT – MOMENTUM 5–8%\n\n"
+
+    for i, r in enumerate(rekom[:3], start=1):
+        pesan += (
+            f"{i}⃣ {r['kode']}\n"
+            f"Harga sekarang : {r['harga']}\n"
+            f"Masuk ideal    : {r['entry']}\n"
+            f"Target         : {r['target']} (~7%)\n"
+            f"Batas rugi     : {r['sl']} (-3%)\n"
+            f"Alasan         : {r['alasan']}\n\n"
+        )
+
+    pesan += "⚠️ Mode ini agresif. Wajib disiplin stoploss."
 
     await ctx.send(pesan)
 
