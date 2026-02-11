@@ -1,40 +1,30 @@
 SAHAM_BIG = [
     "BBRI","BMRI","BBCA","BBNI","BRIS",
-    "TLKM","ASII","UNVR","ICBP","INDF",
-    "CPIN","JPFA","KLBF","SIDO","SMGR",
-    "INTP","PGAS","ADRO","ITMG","PTBA",
-    "ANTM","INCO","MDKA","HRUM","MEDC"
+    "TLKM","ASII","ICBP","INDF","CPIN",
+    "ADRO","PTBA","ANTM","MDKA","MEDC"
 ]
-
 SAHAM_MID = [
     "BRPT","TPIA","ERAA","ACES","MAPI",
     "EXCL","ISAT","GOTO","BUKA","TKIM",
-    "INKP","PTPP","WIKA","SMRA","PWON",
-    "BSDE","CTRA","DMAS","ELSA","ESSA",
-    "HEAL","MIKA","SILO","BTPS","ARTO",
-    "BJBR","BJTM","BBTN","SCMA","TBIG",
-    "AKRA","DOID","DEWA","INDY","LSIP",
-    "DSNG","ULTJ","MYOR","WOOD","MARK"
+    "INKP","SMRA","PWON","BSDE","CTRA",
+    "ELSA","ESSA","HEAL","MIKA","SILO",
+    "BTPS","ARTO","BJBR","BJTM","BBTN",
+    "SCMA","TBIG","AKRA","DOID","DEWA",
+    "INDY","LSIP","DSNG","ULTJ","MYOR",
+    "WOOD","MARK","MTDL","SRTG","EMTK",
+    "ARCI","TOBA","COAL","HILL","IPCC"
 ]
-
 SAHAM_SMALL = [
     "BIPI","BELL","ATLA","DEPO","WIFI",
     "MNCN","KPIG","PANI","NICL","NCKL",
     "FILM","RAJA","ENRG","BOSS","ZINC",
     "BRMS","BUMI","APEX","IPTV","DGIK",
-    "KREN","DSSA","OKAS","PACK","PPRE",
-    "SAME","CARE","HOMI","WEHA","SAFE",
-    "DATA","JAST","MGRO","PSGO","SICO",
-    "IMPC","MLBI","ROTI","CMRY","CLEO"
+    "OKAS","PACK","PPRE","SAME","CARE",
+    "HOMI","WEHA","SAFE","DATA","JAST",
+    "MGRO","PSGO","SICO","IMPC","MLBI",
+    "ROTI","CMRY","CLEO","CUAN","BBKP",
+    "BBMD","CARS","CENT","DEAL","EDGE",
+    "KINO","PICO","AGII","BBYB","MTDL",
+    "SRTG","EMTK","ARCI","TOBA","COAL"
 ]
-
-SAHAM_EXTRA = [
-    "AGII","ARCI","BBYB","BBKP","BBMD",
-    "BBYB","BBKP","BRPT","CARS","CENT",
-    "COAL","CUAN","DEAL","EDGE","EMTK",
-    "FREN","GIAA","HILL","IPCC","KINO",
-    "LPPF","MTDL","PICO","SRTG","TOBA"
-]
-
-SAHAM_ALL = SAHAM_BIG + SAHAM_MID + SAHAM_SMALL + SAHAM_EXTRA
-
+SAHAM_ALL = SAHAM_BIG + SAHAM_MID + SAHAM_SMALL
